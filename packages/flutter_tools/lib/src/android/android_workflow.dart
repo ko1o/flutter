@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// @dart = 2.8
+
 import 'package:meta/meta.dart';
 import 'package:process/process.dart';
 
@@ -43,14 +45,19 @@ class AndroidWorkflow implements Workflow {
   AndroidWorkflow({
     @required AndroidSdk androidSdk,
     @required FeatureFlags featureFlags,
+    @required OperatingSystemUtils operatingSystemUtils,
   }) : _androidSdk = androidSdk,
-       _featureFlags = featureFlags;
+       _featureFlags = featureFlags,
+       _operatingSystemUtils = operatingSystemUtils;
 
   final AndroidSdk _androidSdk;
   final FeatureFlags _featureFlags;
+  final OperatingSystemUtils _operatingSystemUtils;
 
   @override
-  bool get appliesToHostPlatform => _featureFlags.isAndroidEnabled;
+  bool get appliesToHostPlatform => _featureFlags.isAndroidEnabled
+    // Android Studio is not currently supported on Linux Arm64 Hosts.
+    && _operatingSystemUtils.hostPlatform != HostPlatform.linux_arm64;
 
   @override
   bool get canListDevices => _androidSdk != null
@@ -181,7 +188,7 @@ class AndroidValidator extends DoctorValidator {
       return ValidationResult(ValidationType.partial, messages);
     }
 
-    messages.add(ValidationMessage(_userMessages.androidSdkLocation(_androidSdk.directory)));
+    messages.add(ValidationMessage(_userMessages.androidSdkLocation(_androidSdk.directory?.path)));
 
     String sdkVersionText;
     if (_androidSdk.latestVersion != null) {

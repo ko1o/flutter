@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:meta/meta.dart';
 import 'package:package_config/package_config.dart';
 
 /// The JavaScript bootstrap script to support in-browser hot restart.
@@ -15,8 +14,8 @@ import 'package:package_config/package_config.dart';
 /// and is responsible for bootstrapping the RequireJS modules and attaching
 /// the hot reload hooks.
 String generateBootstrapScript({
-  @required String requireUrl,
-  @required String mapperUrl,
+  required String requireUrl,
+  required String mapperUrl,
 }) {
   return '''
 "use strict";
@@ -52,9 +51,9 @@ document.head.appendChild(requireEl);
 /// `foo__bar__baz`. Rather than attempt to guess, we assume the first property of
 /// this object is the module.
 String generateMainModule({
-  @required String entrypoint,
-  @required bool nullAssertions,
-  @required bool nativeNullAssertions,
+  required String entrypoint,
+  required bool nullAssertions,
+  required bool nativeNullAssertions,
   String bootstrapModule = 'main_module.bootstrap',
 }) {
   // TODO(jonahwilliams): fix typo in dwds and update.
@@ -100,9 +99,10 @@ define("$bootstrapModule", ["$entrypoint", "dart_sdk"], function(app, dart_sdk) 
 ///
 /// This hard-codes the device pixel ratio to 3.0 and a 2400 x 1800 window size.
 String generateTestEntrypoint({
-  @required String relativeTestPath,
-  @required String absolutePath,
-  @required LanguageVersion languageVersion,
+  required String relativeTestPath,
+  required String absolutePath,
+  required String testConfigPath,
+  required LanguageVersion languageVersion,
 }) {
   return '''
   // @dart = ${languageVersion.major}.${languageVersion.minor}
@@ -110,6 +110,7 @@ String generateTestEntrypoint({
   import 'dart:ui' as ui;
   import 'dart:html';
   import 'dart:js';
+  ${testConfigPath != null ? "import '${Uri.file(testConfigPath)}' as test_config;" : ""}
   import 'package:stream_channel/stream_channel.dart';
   import 'package:flutter_test/flutter_test.dart';
   import 'package:test_api/src/backend/stack_trace_formatter.dart'; // ignore: implementation_imports
@@ -122,7 +123,10 @@ String generateTestEntrypoint({
     webGoldenComparator = DefaultWebGoldenComparator(Uri.parse('$absolutePath'));
     (ui.window as dynamic).debugOverrideDevicePixelRatio(3.0);
     (ui.window as dynamic).webOnlyDebugPhysicalSizeOverride = const ui.Size(2400, 1800);
-    internalBootstrapBrowserTest(() => test.main);
+
+    internalBootstrapBrowserTest(() {
+      return ${testConfigPath != null ? "() => test_config.testExecutable(test.main)" : "test.main"};
+    });
   }
 
   void internalBootstrapBrowserTest(Function getMain()) {
@@ -131,14 +135,6 @@ String generateTestEntrypoint({
   }
 
   StreamChannel serializeSuite(Function getMain(), {bool hidePrints = true}) => RemoteListener.start(getMain, hidePrints: hidePrints);
-
-  StreamChannel suiteChannel(String name) {
-    var manager = SuiteChannelManager.current;
-    if (manager == null) {
-      throw StateError('suiteChannel() may only be called within a test worker.');
-    }
-    return manager.connectOut(name);
-  }
 
   StreamChannel postMessageChannel() {
     var controller = StreamChannelController(sync: true);

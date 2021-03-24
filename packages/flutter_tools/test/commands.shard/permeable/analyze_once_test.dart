@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// @dart = 2.8
+
 import 'package:flutter_tools/src/base/error_handling_io.dart';
 import 'package:flutter_tools/src/base/user_messages.dart';
 import 'package:flutter_tools/src/globals.dart' as globals;
@@ -109,13 +111,14 @@ void main() {
     processManager = const LocalProcessManager();
     platform = const LocalPlatform();
     terminal = AnsiTerminal(platform: platform, stdio: Stdio());
-    fileSystem = LocalFileSystem.instance;
+    fileSystem = globals.localFileSystem;
     logger = BufferLogger.test();
     analyzerSeparator = platform.isWindows ? '-' : '•';
     artifacts = CachedArtifacts(
       cache: globals.cache,
       fileSystem: fileSystem,
       platform: platform,
+      operatingSystemUtils: FakeOperatingSystemUtils(),
     );
     Cache.flutterRoot = Cache.defaultFlutterRoot(
       fileSystem: fileSystem,
